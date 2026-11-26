@@ -77,6 +77,19 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
   `audited_*` helpers — never `instance.save()` directly in a view. Models can add related
   data to the log with `audit_snapshot_extra()` (Invoice adds its lines). AuditLog is
   append-only. Django admin edits are NOT in AuditLog (admin keeps its own history).
+- Frontend conventions (`frontend/src`):
+  - `lib/api/types.ts` mirrors the DRF serializers — update it when a serializer changes.
+    Money/rates are strings end to end; `lib/format.ts` formats them without `Number()`.
+  - `lib/api/client.ts` is the only `fetch` caller (Bearer token, refresh-on-401, DRF errors →
+    `ApiError.fieldErrors` with paths like `items.0.quantity`).
+  - Company-scoped endpoint functions take `companyId` first (sent as X-Company-ID) and every
+    query key includes `company.id`. Don't read the company from global state in API calls.
+  - Logged-in pages are client components under `app/(app)/` wrapped by `AppShell`;
+    `experimental.instantInsights.validationLevel = "manual-warning"` because they can't
+    render on the server (token lives in the browser).
+  - Forms: react-hook-form + zod via our own `zodResolver` in `lib/forms.ts` (no
+    @hookform/resolvers). Native `<select>` (`components/ui/native-select.tsx`).
+  - Forms never compute VAT or totals; they show the server's numbers after saving.
 - Tests use the `vat_18` fixture (root conftest) instead of relying on seed data.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.
