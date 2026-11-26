@@ -66,16 +66,17 @@ def price_invoice(company: Company, issue_date: date, items: list[dict]) -> Pric
     return PricedInvoice(lines, subtotal, vat_amount, subtotal + vat_amount)
 
 
-def price_spending(net: Decimal, treatment: str, on_date: date) -> dict:
+def price_spending(
+    net: Decimal, treatment: str, on_date: date, *, supplier_charges_vat: bool = True
+) -> dict:
     """
     Input VAT on a purchase or expense, from its VAT-exclusive amount.
+    A supplier that isn't VAT-registered charges none (supplier_charges_vat=False).
 
     Whether that VAT can actually be *claimed* (buyer VAT-registered, supplier's
-    EBM receipt present...) is decided later by tax_engine.calculate_vat.
-    TODO: purchases from suppliers who aren't VAT-registered carry no VAT;
-    model that once we decide how (see Step 4 report).
+    EBM receipt present...) is decided by tax_engine.services.calculate_vat.
     """
-    vat = _line_vat(net, treatment, on_date, charge_vat=True)
+    vat = _line_vat(net, treatment, on_date, charge_vat=supplier_charges_vat)
     return {
         "amount_excl_vat": vat.net,
         "vat_rate": vat.rate,

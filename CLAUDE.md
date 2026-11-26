@@ -65,6 +65,12 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
 - Invoice lifecycle: draft (editable, deletable) → issued (locked; counts for VAT; payable)
   → cancelled (only if unpaid). Status changes only via `/issue/` and `/cancel/`.
   Issuing re-prices with the rules in force. Payments can't exceed the balance.
+- `Supplier.vat_registered` (default True): unregistered suppliers' purchases/expenses carry
+  0 input VAT.
+- `tax_engine.services.calculate_vat(company, start, end)`: issued invoices only; input VAT
+  claimable only on dates the company is VAT-registered. Records without a supplier EBM
+  receipt are **counted with a warning** for now (TODO(EBM): make strict). Warnings have a
+  stable `code` the frontend can use.
 - Tests use the `vat_18` fixture (root conftest) instead of relying on seed data.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.

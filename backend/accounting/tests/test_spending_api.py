@@ -45,6 +45,18 @@ def test_editing_a_purchase_reprices_it(api, supplier):
     assert response.json()["total_amount"] == "1000.00"
 
 
+def test_purchase_from_unregistered_supplier_has_no_vat(api, owner):
+    supplier = SupplierFactory(company=owner.company, vat_registered=False)
+    response = api.post(
+        "/api/purchases/",
+        {"supplier": str(supplier.pk), "purchase_date": "2026-03-05", "amount_excl_vat": "1000"},
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.json()["vat_amount"] == "0.00"
+    assert response.json()["total_amount"] == "1000.00"
+
+
 def test_purchase_supplier_must_belong_to_the_company(api):
     foreign = SupplierFactory(company=CompanyFactory())
     response = api.post(

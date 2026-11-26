@@ -66,7 +66,9 @@ class Customer(Party):
 
 
 class Supplier(Party):
-    pass
+    # A supplier that isn't VAT-registered can't charge VAT, so its bills carry no input VAT.
+    # Changing this later doesn't re-price purchases already recorded.
+    vat_registered = models.BooleanField("VAT-registered", default=True)
 
 
 # --- Sales ------------------------------------------------------------------

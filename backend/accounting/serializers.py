@@ -36,7 +36,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = PARTY_FIELDS
+        fields = [*PARTY_FIELDS, "vat_registered"]
         read_only_fields = ["id", "created_at"]
 
 
@@ -235,10 +235,14 @@ class SpendingSerializer(serializers.ModelSerializer):
                 return getattr(self.instance, field)
             return self.Meta.model._meta.get_field(field).get_default()
 
+        supplier = current("supplier")
         try:
             attrs.update(
                 price_spending(
-                    current("amount_excl_vat"), current("tax_treatment"), current(self.date_field)
+                    current("amount_excl_vat"),
+                    current("tax_treatment"),
+                    current(self.date_field),
+                    supplier_charges_vat=supplier.vat_registered if supplier else True,
                 )
             )
         except PricingError as exc:
