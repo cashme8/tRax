@@ -18,6 +18,7 @@ from accounting.serializers import (
     PurchaseSerializer,
     SupplierSerializer,
 )
+from audit.models import AuditLog
 from companies.scoping import CompanyScopedViewSet
 
 NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
@@ -76,10 +77,14 @@ class InvoiceViewSet(CompanyScopedViewSet):
         # Re-price with the rules in force now, in case they changed since the draft was saved.
         serializer = self.get_serializer(invoice, data={}, partial=True)
         serializer.is_valid(raise_exception=True)
-        invoice = serializer.save()
-        invoice.status = Invoice.Status.ISSUED
-        invoice.save(update_fields=["status", "updated_at"])
-        # TODO(EBM/VSDC): send the invoice to VSDC here and store ebm_receipt_number.
+
+        def issue_it():
+            serializer.save()
+            invoice.status = Invoice.Status.ISSUED
+            invoice.save(update_fields=["status", "updated_at"])
+            # TODO(EBM/VSDC): send the invoice to VSDC here and store ebm_receipt_number.
+
+        self.audited_action(AuditLog.Action.ISSUE, invoice, issue_it)
         return Response(self.get_serializer(invoice).data)
 
     @action(detail=True, methods=["post"])
@@ -93,9 +98,13 @@ class InvoiceViewSet(CompanyScopedViewSet):
             raise exceptions.ValidationError(
                 {"detail": "This invoice has payments. Remove them before cancelling."}
             )
-        # TODO(EBM/VSDC): issue the matching EBM refund/credit note.
-        invoice.status = Invoice.Status.CANCELLED
-        invoice.save(update_fields=["status", "updated_at"])
+
+        def cancel_it():
+            # TODO(EBM/VSDC): issue the matching EBM refund/credit note.
+            invoice.status = Invoice.Status.CANCELLED
+            invoice.save(update_fields=["status", "updated_at"])
+
+        self.audited_action(AuditLog.Action.CANCEL, invoice, cancel_it)
         return Response(self.get_serializer(invoice).data)
 
 

@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     "companies",
     "tax_engine",
     "accounting",
-    # next: "audit"
+    "audit",
     # later: "compliance", "documents", "reports"
 ]
 

@@ -21,6 +21,7 @@ from functools import cached_property
 from django.db.models import ProtectedError
 from rest_framework import exceptions, permissions, serializers, viewsets
 
+from audit.mixins import AuditedMixin
 from companies.models import Company, CompanyMember, Role
 
 READ_ROLES = (Role.OWNER, Role.ACCOUNTANT, Role.VIEWER)
@@ -57,8 +58,11 @@ class HasCompanyRole(permissions.BasePermission):
         return role in allowed
 
 
-class CompanyContextMixin:
-    """Gives a view `self.membership` and `self.company`, and enforces roles."""
+class CompanyContextMixin(AuditedMixin):
+    """
+    Gives a view `self.membership` and `self.company`, enforces roles, and
+    writes an AuditLog row for every create, update and delete.
+    """
 
     permission_classes = [permissions.IsAuthenticated, HasCompanyRole]
     read_roles: tuple[str, ...] = READ_ROLES
@@ -80,6 +84,26 @@ class CompanyContextMixin:
         # customer) belong to the same company.
         return {**super().get_serializer_context(), "company": self.company}
 
+    # --- saving (always audited) ---------------------------------------------
+
+    def get_save_kwargs(self) -> dict:
+        """Extra values forced onto every new record (e.g. company=...)."""
+        return {}
+
+    def perform_create(self, serializer) -> None:
+        self.audited_create(serializer, **self.get_save_kwargs())
+
+    def perform_update(self, serializer) -> None:
+        self.audited_update(serializer)
+
+    def perform_destroy(self, instance) -> None:
+        try:
+            self.audited_destroy(instance)
+        except ProtectedError:
+            raise exceptions.ValidationError(
+                {"detail": "This record is used by other records and can't be deleted."}
+            ) from None
+
 
 class CompanyFromUrlMixin(CompanyContextMixin):
     company_url_kwarg = "company_pk"
@@ -88,14 +112,8 @@ class CompanyFromUrlMixin(CompanyContextMixin):
         return self.kwargs[self.company_url_kwarg]
 
 
-class CompanyScopedViewSet(CompanyContextMixin, viewsets.ModelViewSet):
-    """
-    Base for every company-owned business record. Subclasses set `queryset`
-    and `serializer_class`; this class guarantees:
-      * list/detail only ever show the active company's rows;
-      * new rows are always saved to the active company (the client can't choose);
-      * viewers can read, owners/accountants can write.
-    """
+class CompanyFromHeaderMixin(CompanyContextMixin):
+    """The active company comes from the X-Company-ID header the frontend sends."""
 
     COMPANY_HEADER = "X-Company-ID"
 
@@ -107,19 +125,22 @@ class CompanyScopedViewSet(CompanyContextMixin, viewsets.ModelViewSet):
             )
         return company_id
 
+
+class CompanyScopedViewSet(CompanyFromHeaderMixin, viewsets.ModelViewSet):
+    """
+    Base for every company-owned business record. Subclasses set `queryset`
+    and `serializer_class`; this class guarantees:
+      * list/detail only ever show the active company's rows;
+      * new rows are always saved to the active company (the client can't choose);
+      * viewers can read, owners/accountants can write;
+      * every create, update and delete is written to the audit log.
+    """
+
     def get_queryset(self):
         return super().get_queryset().filter(company=self.company)
 
-    def perform_create(self, serializer) -> None:
-        serializer.save(company=self.company)
-
-    def perform_destroy(self, instance) -> None:
-        try:
-            instance.delete()
-        except ProtectedError:
-            raise exceptions.ValidationError(
-                {"detail": "This record is used by other records and can't be deleted."}
-            ) from None
+    def get_save_kwargs(self) -> dict:
+        return {"company": self.company}
 
 
 class CompanyScopedPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):

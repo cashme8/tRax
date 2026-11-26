@@ -1,6 +1,7 @@
 from django.db.models import OuterRef, Subquery
 from rest_framework import mixins, permissions, viewsets
 
+from audit.mixins import AuditedMixin
 from companies.models import Company, CompanyMember, TaxProfile
 from companies.scoping import EDIT_ROLES, OWNER_ONLY, CompanyFromUrlMixin
 from companies.serializers import (
@@ -18,6 +19,7 @@ class CanEditCompany(permissions.BasePermission):
 
 
 class CompanyViewSet(
+    AuditedMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
@@ -43,6 +45,16 @@ class CompanyViewSet(
         return Company.objects.filter(
             members__user=self.request.user, members__is_active=True
         ).annotate(my_role=Subquery(mine.values("role")[:1]))
+
+    # Audited like everything else; the company a row belongs to is the company itself.
+    def audit_company(self, instance: Company) -> Company:
+        return instance
+
+    def perform_create(self, serializer) -> None:
+        self.audited_create(serializer)
+
+    def perform_update(self, serializer) -> None:
+        self.audited_update(serializer)
 
 
 class CompanyMemberViewSet(
@@ -84,5 +96,5 @@ class TaxProfileViewSet(
     def get_queryset(self):
         return TaxProfile.objects.filter(company=self.company)
 
-    def perform_create(self, serializer) -> None:
-        serializer.save(company=self.company)
+    def get_save_kwargs(self) -> dict:
+        return {"company": self.company}

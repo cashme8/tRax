@@ -105,6 +105,22 @@ class Invoice(CompanyOwnedModel):
     def __str__(self) -> str:
         return self.invoice_number
 
+    def audit_snapshot_extra(self) -> dict:
+        """The audit log records an invoice together with its lines."""
+        return {
+            "items": [
+                {
+                    "description": item.description,
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price,
+                    "tax_treatment": item.tax_treatment,
+                    "vat_amount": item.vat_amount,
+                    "line_total": item.line_total,
+                }
+                for item in self.items.order_by("position")
+            ]
+        }
+
     @property
     def amount_paid(self) -> Decimal:
         # The list view pre-computes `paid_sum` in one query; otherwise ask the DB.

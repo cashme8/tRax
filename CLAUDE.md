@@ -71,6 +71,12 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
   claimable only on dates the company is VAT-registered. Records without a supplier EBM
   receipt are **counted with a warning** for now (TODO(EBM): make strict). Warnings have a
   stable `code` the frontend can use.
+- Audit: `CompanyContextMixin` (base of every company view) logs create/update/delete via
+  `audit.mixins.AuditedMixin`, storing `{field: [old, new]}`. Custom actions (issue, cancel)
+  use `audited_action`. New views must save through `perform_create/update/destroy` or the
+  `audited_*` helpers — never `instance.save()` directly in a view. Models can add related
+  data to the log with `audit_snapshot_extra()` (Invoice adds its lines). AuditLog is
+  append-only. Django admin edits are NOT in AuditLog (admin keeps its own history).
 - Tests use the `vat_18` fixture (root conftest) instead of relying on seed data.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.
