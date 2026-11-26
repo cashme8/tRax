@@ -90,6 +90,12 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
   - Forms: react-hook-form + zod via our own `zodResolver` in `lib/forms.ts` (no
     @hookform/resolvers). Native `<select>` (`components/ui/native-select.tsx`).
   - Forms never compute VAT or totals; they show the server's numbers after saving.
+- `backend/tests/test_every_endpoint_is_scoped.py` fails if any `/api/` view isn't built on
+  `CompanyContextMixin` or listed (with a reason) in its `ALLOWED_UNSCOPED`. Don't add to the
+  allowlist without a real reason. `tests/test_tenant_isolation.py` is the A-vs-B acceptance
+  test: extend it when adding a new company-owned record type.
+- Booleans with tax consequences use `common.serializers.ExplicitBooleanField` (DRF otherwise
+  reads a flag omitted from an HTML-form POST as False).
 - Tests use the `vat_18` fixture (root conftest) instead of relying on seed data.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.

@@ -89,6 +89,10 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
         fields = super().get_fields()
         if self.instance is not None:  # updating: role / is_active only, not who it is
             fields["email"].read_only = True
+        else:
+            # New members are always active. (DRF reads a boolean left out of an
+            # HTML-form POST as False, which would silently invite someone switched off.)
+            fields["is_active"].read_only = True
         return fields
 
     def validate_email(self, value: str) -> User:

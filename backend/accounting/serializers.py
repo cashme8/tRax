@@ -12,6 +12,7 @@ from accounting.models import (
     Supplier,
 )
 from accounting.pricing import PricingError, price_invoice, price_spending
+from common.serializers import ExplicitBooleanField
 from companies.scoping import CompanyScopedPrimaryKeyRelatedField as ScopedPK
 
 MONEY_READ = {"max_digits": 16, "decimal_places": 2, "read_only": True}
@@ -34,10 +35,19 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class SupplierSerializer(serializers.ModelSerializer):
+    # Must be chosen explicitly: it decides whether purchases carry input VAT.
+    vat_registered = ExplicitBooleanField(required=True)
+
     class Meta:
         model = Supplier
         fields = [*PARTY_FIELDS, "vat_registered"]
         read_only_fields = ["id", "created_at"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if self.instance is not None:  # PATCH may leave it unchanged
+            fields["vat_registered"].required = False
+        return fields
 
 
 # --- Invoices ---------------------------------------------------------------

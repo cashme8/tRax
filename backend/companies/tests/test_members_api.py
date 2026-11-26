@@ -44,6 +44,19 @@ def test_owner_invites_existing_user_by_email(client_for):
     assert CompanyMember.objects.get(company=owner.company, user=invitee).role == Role.ACCOUNTANT
 
 
+@pytest.mark.parametrize("fmt", ["json", "multipart"])
+def test_invited_member_is_active_whatever_the_request_format(client_for, fmt):
+    owner = member_of(CompanyFactory())
+    invitee = UserFactory()
+    response = client_for(owner.user).post(
+        members_url(owner.company),
+        {"email": invitee.email, "role": "viewer", "is_active": False},
+        format=fmt,
+    )
+    assert response.status_code == 201
+    assert CompanyMember.objects.get(company=owner.company, user=invitee).is_active is True
+
+
 @pytest.mark.parametrize("role", [Role.ACCOUNTANT, Role.VIEWER])
 def test_only_owners_can_invite(client_for, role):
     m = member_of(CompanyFactory(), role)

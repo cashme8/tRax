@@ -103,6 +103,22 @@ def test_expense_supplier_is_optional(api):
     assert response.json()["supplier"] is None
 
 
+def test_supplier_vat_registration_must_be_chosen(api):
+    response = api.post("/api/suppliers/", {"name": "No choice"})  # form post, flag left out
+    assert response.status_code == 400
+    assert "vat_registered" in response.json()
+    ok = api.post("/api/suppliers/", {"name": "Chosen", "vat_registered": True}, format="json")
+    assert ok.status_code == 201
+    assert ok.json()["vat_registered"] is True
+
+
+def test_supplier_can_be_renamed_without_resending_vat_flag(api, owner):
+    supplier = SupplierFactory(company=owner.company, vat_registered=False)
+    response = api.patch(f"/api/suppliers/{supplier.pk}/", {"name": "Renamed"}, format="json")
+    assert response.status_code == 200
+    assert response.json()["vat_registered"] is False
+
+
 def test_customer_with_invoices_cannot_be_deleted(api, owner):
     customer = CustomerFactory(company=owner.company)
     InvoiceFactory(company=owner.company, customer=customer)

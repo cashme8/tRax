@@ -3,8 +3,10 @@
 Tax compliance for Rwandan companies and their accountants: record invoices, purchases and
 expenses, calculate RRA taxes, track filing deadlines and prepare returns.
 
-> **Status:** Milestone 1 in progress. tRax prepares figures; the company or its accountant
-> reviews and files every return. Seeded tax rates must be verified with RRA.
+> **Status:** Milestone 1 complete — accounts, companies and roles, invoices/purchases/expenses
+> with server-side VAT, the `calculate_vat` service, audit log, and the web app. tRax prepares
+> figures; the company or its accountant reviews and files every return. Seeded tax rates
+> must be verified with RRA.
 
 ## Repository layout
 
@@ -41,7 +43,7 @@ Then open:
 | API health check | http://localhost:8000/api/health/ → `{"status": "ok"}` |
 | Django admin (staff only) | http://localhost:8000/admin/ |
 
-Create an admin user (after Step 2 adds the custom user model):
+Create an admin user (for Django admin, e.g. to review tax rules):
 
 ```bash
 docker compose run --rm backend python manage.py createsuperuser
@@ -63,6 +65,24 @@ docker compose run --rm backend python manage.py migrate
 docker compose run --rm frontend npm run lint        # ESLint
 docker compose run --rm frontend npm run typecheck   # TypeScript strict check
 ```
+
+Key tests:
+
+- `backend/tests/test_tenant_isolation.py` — user A can't see or change company B's data.
+- `backend/tests/test_every_endpoint_is_scoped.py` — every API endpoint is company-scoped
+  (or on a reviewed allowlist).
+- `backend/tax_engine/tests/test_calculate_vat.py` — VAT calculation, incl. zero-rated and
+  exempt lines.
+
+## API overview
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/auth/register/` · `login/` · `refresh/` · `GET /api/auth/me/` | Accounts (JWT) |
+| `/api/companies/` · `/api/companies/<id>/members/` · `/tax-profiles/` | Companies, roles, tax profile history |
+| `/api/customers/` · `/suppliers/` · `/invoices/` (+`/issue/`, `/cancel/`) · `/payments/` · `/purchases/` · `/expenses/` | Records (send `X-Company-ID`) |
+| `GET /api/tax/vat-summary/?start=&end=` | VAT position for a period |
+| `GET /api/audit-log/` | Change history (owners, accountants) |
 
 If you add a dependency, rebuild: `docker compose build backend` or `docker compose build frontend`.
 
