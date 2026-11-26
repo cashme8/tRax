@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     # tRax apps — added one by one as each milestone step builds them.
     "common",
     "accounts",
-    # next: "companies", "accounting", "tax_engine", "audit"
+    "companies",
+    # next: "accounting", "tax_engine", "audit"
     # later: "compliance", "documents", "reports"
 ]
 

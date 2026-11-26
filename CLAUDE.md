@@ -50,6 +50,12 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
   (To be confirmed with RRA.)
 - Standard-rated expenses count toward input VAT, like purchases.
 - Inviting a member = adding an existing user by email (email invitations later).
+- Roles: all roles read; owner + accountant create/edit records, company and tax profile;
+  only owners manage members. A company must keep at least one active owner.
+- Tenant scoping lives in `backend/companies/scoping.py`: business-record viewsets subclass
+  `CompanyScopedViewSet`; company-settings views use `CompanyFromUrlMixin`.
+- TaxProfile is history (new row per change, never edited); `company.tax_profile_on(date)`.
+- Members and companies are deactivated, never deleted.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.
   TODO before production: move refresh token to an httpOnly cookie.
