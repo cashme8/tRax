@@ -56,6 +56,16 @@ factory-boy, ruff; Next.js, React, Tailwind, shadcn/ui (and the packages its CLI
   `CompanyScopedViewSet`; company-settings views use `CompanyFromUrlMixin`.
 - TaxProfile is history (new row per change, never edited); `company.tax_profile_on(date)`.
 - Members and companies are deactivated, never deleted.
+- Business-record models subclass `companies.models.CompanyOwnedModel`; links to other records
+  use `CompanyScopedPrimaryKeyRelatedField` so only same-company ids are accepted.
+- Line VAT lives in `tax_engine/vat.py` (`vat_for_line`); `accounting/pricing.py` applies it.
+  Computed money fields are `editable=False` (read-only in the API). Each priced line stores
+  the `tax_rule` it used.
+- A company that isn't VAT-registered on the issue date charges 0 VAT on sales.
+- Invoice lifecycle: draft (editable, deletable) → issued (locked; counts for VAT; payable)
+  → cancelled (only if unpaid). Status changes only via `/issue/` and `/cancel/`.
+  Issuing re-prices with the rules in force. Payments can't exceed the balance.
+- Tests use the `vat_18` fixture (root conftest) instead of relying on seed data.
 - Active company is sent by the frontend in the `X-Company-ID` header.
 - JWT: access token in memory, refresh token in localStorage.
   TODO before production: move refresh token to an httpOnly cookie.

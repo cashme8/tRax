@@ -18,7 +18,8 @@ If the user isn't an active member, the answer is 404 "not found" — never
 import uuid
 from functools import cached_property
 
-from rest_framework import exceptions, permissions, viewsets
+from django.db.models import ProtectedError
+from rest_framework import exceptions, permissions, serializers, viewsets
 
 from companies.models import Company, CompanyMember, Role
 
@@ -111,3 +112,22 @@ class CompanyScopedViewSet(CompanyContextMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer) -> None:
         serializer.save(company=self.company)
+
+    def perform_destroy(self, instance) -> None:
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise exceptions.ValidationError(
+                {"detail": "This record is used by other records and can't be deleted."}
+            ) from None
+
+
+class CompanyScopedPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    """
+    A link to another record (e.g. an invoice's customer) that only accepts
+    records of the active company. Another company's id is reported as
+    "does not exist", so its existence isn't revealed.
+    """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(company=self.context["company"])

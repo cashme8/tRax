@@ -42,6 +42,19 @@ class Company(TimeStampedModel):
         )
 
 
+class CompanyOwnedModel(TimeStampedModel):
+    """
+    Base for every business record (invoices, expenses...). The `company` link
+    is what CompanyScopedViewSet filters on, so every record is tenant-scoped.
+    PROTECT: a company with records can never be deleted by accident.
+    """
+
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        abstract = True
+
+
 class Role(models.TextChoices):
     OWNER = "owner", "Owner"
     ACCOUNTANT = "accountant", "Accountant"

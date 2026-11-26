@@ -25,3 +25,23 @@ def client_for():
         return client
 
     return make
+
+
+@pytest.fixture
+def vat_18(db):
+    """
+    Replace whatever VAT rules exist (e.g. the seeded one) with a known
+    18% rule from 2001, so tests don't depend on seed data that admins may edit.
+    """
+    import datetime
+    from decimal import Decimal
+
+    from tax_engine.models import TaxRule
+
+    TaxRule.objects.all().delete()
+    return TaxRule.objects.create(
+        tax_type="vat",
+        rate=Decimal("0.1800"),
+        effective_from=datetime.date(2001, 1, 1),
+        rule_version="test-vat-18",
+    )
