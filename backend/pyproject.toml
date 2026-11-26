@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "tests.py"]
+# --reuse-db keeps the test database between runs (faster); add --create-db to rebuild.
+addopts = "--reuse-db --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+# E/F = pyflakes+pycodestyle, I = import order, B = likely bugs, DJ = Django rules, UP = modern syntax
+select = ["E", "F", "I", "B", "DJ", "UP"]
